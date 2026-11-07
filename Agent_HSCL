@@ -1,1 +1,131 @@
+# Quy trình chạy Agent kiểm tra hồ sơ chất lượng
+
+Nov 8, 2026 · @Sơn
+
+Tài liệu hướng dẫn vận hành agent đối chiếu hồ sơ chất lượng nhà thầu, đặt tại `D:\Claude_Agent\01.Check_HSCL`. Người mới làm theo đúng thứ tự dưới đây là chạy được.
+
+## Chuẩn bị một lần
+
+Làm xong phần này thì không phải làm lại, trừ khi đổi máy.
+
+**1. Mở thư mục dự án trong VS Code.** File → Open Folder → chọn `D:\Claude_Agent\01.Check_HSCL`. Phải thấy các thư mục `01_QUY_TAC`, `02_HO_SO_KIEM_TRA`, `03_KET_QUA`, `tools` ở cột bên trái.
+
+**2. Cài 3 thư viện Python.** Mở Terminal trong VS Code bằng phím ` Ctrl +  ` \` (phím dấu huyền, góc trên bên trái bàn phím), hoặc menu Terminal → New Terminal. Terminal tự mở đúng tại thư mục dự án. Gõ:
+
+```
+pip install python-docx openpyxl pdfplumber
+```
+
+**3. Kiểm tra bộ công cụ chạy được** trước khi đụng tới Claude:
+
+```
+python tools\kiem_ke_ho_so.py DEMO-01
+```
+
+Phải ra dòng `Da kiem ke 7 file cua bo DEMO-01`. Lỗi ở bước này là lỗi Python, chưa liên quan tới agent.
+
+**4. Cài extension Claude Code.** Nhấn `Ctrl + Shift + X`, tìm "Claude Code", chọn bản của Anthropic, bấm Install. Yêu cầu VS Code từ phiên bản 1.94 trở lên.
+
+**5. Đăng nhập.** Bấm biểu tượng Claude Code ở thanh bên trái hoặc ở góc dưới bên phải cửa sổ, màn hình đăng nhập hiện ra, bấm Sign in và hoàn tất trên trình duyệt. Dùng tài khoản Claude trả phí, không cần API key.
+
+**6. Kiểm tra agent đã được nạp.** Trong ô chat của Claude Code, gõ `/agents`. Danh sách phải có `ho-so-chat-luong`. Không thấy thì chạy Developer: Reload Window từ `Ctrl + Shift + P`.
+
+**7. Chạy thử bộ DEMO-01.** Gõ trong ô chat:
+
+```
+Kiểm tra bộ hồ sơ DEMO-01
+```
+
+Kết quả đúng là 5 phát hiện mức CAO: thiếu CQ thép lô TH-0925, nghiệm thu ngày 05/10 trong khi kết quả nén mẫu ban hành 08/10, mác thép CB400-V trên bản vẽ nhưng CB300-V trong thí nghiệm, khối lượng 45,2 m³ lệch với bảng tính 48,605 m³, và thiếu chữ ký tư vấn giám sát. Ra đúng 5 lỗi này là hệ thống chạy chuẩn.
+
+## Toàn cảnh quy trình
+
+&#91;embedded content: quy trình kiểm tra hồ sơ chất lượng · 3 việc tay, 3 bước tự động\]
+
+Ba ô trên cùng là việc phải làm tay mỗi lần; ba ô dưới Claude tự chạy sau một câu lệnh. Nếu agent kết luận sai ràng buộc, script không xuất file mà trả về cho agent sửa, nên không có báo cáo nào ra đời với bằng chứng bịa.
+
+## Chạy một bộ hồ sơ
+
+Đây là phần lặp lại mỗi lần nhà thầu nộp hồ sơ. Năm bước, khoảng 2 phút thao tác tay.
+
+**Bước 1 — Tạo thư mục cho bộ hồ sơ.** Trong VS Code, chuột phải vào `02_HO_SO_KIEM_TRA` → New Folder. Đặt mã theo cách đang quản lý hồ sơ, ví dụ `TT5-KC-D04` cho hồ sơ thanh toán đợt 4 gói kết cấu Tháp TT5. Mã không có dấu cách và không có dấu tiếng Việt.
+
+**Bước 2 — Chép hồ sơ nhà thầu vào thư mục đó.** Kéo thả từ File Explorer vào thư mục trong VS Code là được. Giữ nguyên tên file gốc của nhà thầu để còn đối chiếu khi làm việc lại với họ. Đánh số đầu tên file nếu muốn thứ tự dễ nhìn.
+
+**Bước 3 — Tạo file `PHIEU_YEU_CAU.md`.** Mở file cùng tên trong thư mục `DEMO-01`, chép toàn bộ nội dung sang file mới rồi sửa lại thông tin. File này cho agent biết phạm vi kiểm tra; thiếu nó agent sẽ kiểm lan man sang những thứ không thuộc đợt này. Tối thiểu phải có: dự án, gói thầu, nhà thầu, số hợp đồng, hạng mục, và kiểm để làm gì.
+
+**Bước 4 — Gõ lệnh cho Claude.** Mở panel Claude Code, gõ đúng một câu:
+
+```
+Kiểm tra bộ hồ sơ TT5-KC-D04
+```
+
+Claude tự chạy ba việc theo thứ tự: kiểm kê và trích văn bản → giao cho agent đối chiếu với quy tắc → kiểm tra ràng buộc rồi xuất Excel. Không cần gõ lệnh Python nào.
+
+Nếu Claude hỏi quyền chạy lệnh, chọn cho phép. Nếu script báo lỗi ràng buộc, Claude sẽ tự sửa kết quả và chạy lại — đó là cơ chế bình thường, không phải sự cố.
+
+**Bước 5 — Mở file Excel kết quả** trong `03_KET_QUA\<MÃ>\`, tên dạng `BAO_CAO_KIEM_TRA_<MÃ>_<ngày>.xlsx`.
+
+Muốn chạy lại bộ cũ sau khi nhà thầu bổ sung hồ sơ thì chép file mới vào đúng thư mục đó rồi gõ lại lệnh ở bước 4. File Excel cũ không bị ghi đè nếu khác ngày.
+
+## Đọc báo cáo Excel
+
+Đọc theo đúng thứ tự ba sheet dưới đây. Đọc ngược từ PHAT\_HIEN lên dễ bỏ sót phần agent không đọc được file.
+
+| Thứ tự | Sheet | Xem gì | Vì sao |
+| --- | --- | --- | --- |
+| 1 | TONG\_HOP | Dòng "So file khong doc duoc" | Mỗi file trong danh sách này là một khoảng trống agent không kiểm được, phải xem tay |
+| 2 | PHAT\_HIEN | Các vấn đề đã sắp theo mức CAO trước | Cột Bằng chứng ghi rõ file và vị trí để mở kiểm chứng ngay |
+| 3 | DO\_PHU | Các dòng kết luận KHONG\_XAC\_DINH | Đây là chỗ agent không tìm được bằng chứng, không phải chỗ hồ sơ đạt |
+
+Màu trong file: đỏ nhạt là mức CAO hoặc kết luận THIEU, vàng là TRUNG\_BINH hoặc KHONG\_XAC\_DINH, xanh nhạt là THAP.
+
+Ba cột cần đọc kỹ ở sheet PHAT\_HIEN: **Bằng chứng** là chỗ agent nhìn thấy vấn đề, **Đối chiếu** là văn bản mâu thuẫn với nó, **Đề xuất xử lý** là việc cần yêu cầu nhà thầu. Luôn mở lại file gốc để kiểm chứng ít nhất các dòng mức CAO trước khi đưa vào công văn.
+
+Nếu có sheet **THIEU\_QUY\_TAC**, đó là những vấn đề agent nhìn thấy nhưng chưa có quy tắc nào để kết luận. Đây là nguồn tốt nhất để biết cần bổ sung quy tắc nào tiếp theo.
+
+Kết quả này là bản rà soát để tiết kiệm thời gian đọc, không phải kết luận nghiệm thu. Quyết định chấp thuận hay trả hồ sơ vẫn thuộc về người kiểm tra.
+
+## Bổ sung căn cứ để mở quy tắc
+
+Agent chỉ chạy những dòng quy tắc có trạng thái `ACTIVE` trong `01_QUY_TAC`. Hiện toàn bộ 19 quy tắc ĐỦ và 20 quy tắc ĐÚNG đều ở `DRAFT` nên bị bỏ qua. Chạy hồ sơ thật lúc này sẽ dừng với thông báo không có quy tắc ACTIVE.
+
+Lý do thiết kế như vậy: **agent bị cấm viện dẫn luật từ trí nhớ.** Mỗi quy tắc `ACTIVE` phải trỏ về một văn bản có thật trong sổ nguồn, để khi nhà thầu phản bác thì có điều khoản để viện dẫn.
+
+**Cách bổ sung:**
+
+1. Chép hợp đồng, phụ lục, chỉ dẫn kỹ thuật, nghị định hoặc PMI vào thư mục `01_QUY_TAC\nguon\`.
+2. Gõ trong Claude Code: `Đây là căn cứ mới, đọc và đề xuất quy tắc`.
+3. Claude thêm một dòng vào `30_NGUON_CAN_CU.md` và đề xuất các quy tắc mới ở trạng thái `DRAFT`, kèm số điều khoản.
+4. Đọc từng dòng, sửa nội dung cho khớp thực tế dự án, rồi tự tay đổi `DRAFT` thành `ACTIVE` trong file `.md`. Chỉ người phụ trách được đổi trạng thái này, không giao cho Claude.
+
+**Nhịp độ nên đi:** bắt đầu bằng hợp đồng và chỉ dẫn kỹ thuật của một gói thầu, duyệt khoảng 10 đến 15 quy tắc, chạy thật vài bộ hồ sơ rồi mới mở rộng. Duyệt 40 quy tắc cùng lúc thì khi kết quả sai sẽ không truy được dòng nào sai.
+
+**Khi văn bản hết hiệu lực:** đổi cột Hiệu lực trong sổ nguồn thành `HET_HIEU_LUC` và ghi mã văn bản thay thế, các quy tắc trỏ về nó cũng chuyển `HET_HIEU_LUC`. Không xóa dòng, để còn tra lại hồ sơ đã kiểm theo quy tắc cũ.
+
+## Sự cố thường gặp
+
+| Hiện tượng | Nguyên nhân | Cách xử lý |
+| --- | --- | --- |
+| `pip` hoặc `python` không nhận lệnh | Python chưa vào PATH | Cài lại Python, tick "Add python.exe to PATH" ở màn hình đầu |
+| Gõ `/agents` không thấy `ho-so-chat-luong` | Agent chỉ nạp lúc mở phiên | `Ctrl + Shift + P` → Developer: Reload Window |
+| Script báo "Khong co quy tac nao o trang thai ACTIVE" | Quy tắc còn ở DRAFT | Bổ sung căn cứ và mở quy tắc sang ACTIVE, xem mục trên |
+| Nhiều file báo `KHONG_DOC_DUOC` | PDF scan chưa có lớp văn bản | OCR trước khi chép vào, hoặc chấp nhận xem tay các file đó |
+| Script từ chối xuất Excel, liệt kê lỗi ràng buộc | Agent kết luận sai hoặc bỏ sót quy tắc | Đưa nguyên thông báo lỗi lại cho Claude để sửa, không tự sửa file để lách |
+| Agent kết luận sai một dòng | Quy tắc viết chưa đủ rõ | Báo Claude dòng nào sai và sai thế nào, sửa lại câu chữ quy tắc |
+| Chạy rất chậm hoặc báo hết hạn mức | Hồ sơ quá nhiều file một lần | Tách thành nhiều bộ nhỏ theo hạng mục |
+
+**Ba việc không được làm:**
+
+- Không sửa file trong `02_HO_SO_KIEM_TRA` — đó là hồ sơ gốc nhà thầu nộp, phải giữ nguyên để đối chiếu.
+- Không để Claude tự đổi `DRAFT` thành `ACTIVE`.
+- Không chép bộ hồ sơ vào thư mục OneDrive đang đồng bộ; để trên ổ local như hiện tại.
+
+## Giới hạn cần nhớ
+
+**PDF scan chưa OCR thì agent không đọc được.** Đây là vướng mắc lớn nhất khi chạy hồ sơ thật, vì hồ sơ nghiệm thu nhà thầu nộp phần lớn là bản scan ký tươi. Agent sẽ liệt kê tên file để xem tay.
+
+**Chữ ký và con dấu agent không xác thực được.** Nó chỉ thấy có hay không có dòng chữ ký trong phần văn bản trích ra, không biết chữ ký đó thật hay giả, đúng người hay không.
+
+**File Excel lớn bị cắt ở 20.000 ký tự mỗi file** khi trích văn bản. Agent được chỉ dẫn đọc trực tiếp phần còn lại khi cần, nhưng hồ sơ quá nặng thì nên tách nhỏ.
 
